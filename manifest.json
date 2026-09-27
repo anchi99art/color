@@ -1,0 +1,24 @@
+{
+  "name": "填色 · ANCHI99",
+  "short_name": "填色",
+  "description": "手繪線稿線上填色",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#1C1F1E",
+  "theme_color": "#1C1F1E",
+  "lang": "zh-Hant",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
