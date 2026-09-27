@@ -108,6 +108,7 @@ input[type=range]{flex:1;accent-color:var(--celadon);min-height:30px}
   <div class="toolrow">
     <button id="mFill" aria-pressed="true">填色</button>
     <button id="mBrush">筆刷</button>
+    <button id="mBlend">混色</button>
     <button id="mErase">橡皮</button>
     <span class="lab2" id="szLab">粗細</span>
     <input type="range" id="size" min="4" max="60" step="2" value="18">
@@ -165,7 +166,7 @@ const PALETTE={
  "木":["#1F4A2B","#2F6B3A","#4A8C4F","#6FA85F","#93C07A","#B7D49C","#D7E8C4","#EEF5E2"],
  "火":["#6E1B14","#9E2E24","#C24631","#D9603F","#E8915E","#F0B183","#F7D2B2","#FBE8D8"],
  "土":["#4E3A1C","#7A5B2E","#9E7A3C","#B9924F","#CFA968","#DEC48D","#EBDAB2","#F5EBD6"],
- "金":["#3A3A3E","#5C5C60","#7C7C82","#9E9EA5","#BEBEC4","#D6D6DA","#EAEAEC","#FBFBF9"],
+ "金":["#6B4A10","#8F6511","#B8860B","#D9A520","#F0C04A","#FBD87A","#FDE9AE","#FEF6DC"],
  "水":["#10233C","#1F3D61","#2E5980","#3E6E96","#5C8CB0","#7FA6C4","#A9C4DA","#CFE0EC"],
  "墨":["#000000","#2B2B2B","#555555","#808080","#AAAAAA","#D5D5D5","#F2F2F2","#FFFFFF"]
 };
@@ -358,6 +359,29 @@ function stroke(a,b,press){
   pctx.restore();
   pdata=null;
 }
+// 混色筆：一邊畫一邊讀下面已經有的顏色，跟筆上的顏色揉在一起，
+// 疊得越久顏色推得越開，像油畫刀把兩色抹在一起。
+let carry=null;
+function mix(a,b,t){return [a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t,a[2]+(b[2]-a[2])*t];}
+function sampleAt(x,y){
+  const px=Math.max(0,Math.min(iw-1,Math.round(x))),py=Math.max(0,Math.min(ih-1,Math.round(y)));
+  try{const d=pctx.getImageData(px,py,1,1).data;return [d[0],d[1],d[2]];}catch(e){return [255,255,255];}
+}
+function strokeBlend(a,b,press){
+  const s0=sampleAt(b[0],b[1]);
+  if(!carry)carry=s0.slice();
+  carry=mix(carry,s0,0.45);
+  const c=mix(carry,hexRGB(color),0.28+0.34*press);
+  pctx.save();
+  pctx.globalAlpha=0.10+0.26*press;
+  pctx.strokeStyle="rgb("+Math.round(c[0])+","+Math.round(c[1])+","+Math.round(c[2])+")";
+  pctx.lineCap="round";pctx.lineJoin="round";
+  const shown=(sheet.clientWidth||iw)*zs;
+  pctx.lineWidth=brush*(iw/shown)*(0.6+0.9*press);
+  pctx.beginPath();pctx.moveTo(a[0],a[1]);pctx.lineTo(b[0],b[1]);pctx.stroke();
+  pctx.restore();
+  pdata=null;
+}
 function pressure(e){let p=e.pressure;if(e.pointerType!=="pen"||!p)p=.6;return Math.max(.08,Math.min(1,p));}
 
 hc.addEventListener("touchstart",e=>e.preventDefault(),{passive:false});
@@ -371,8 +395,10 @@ hc.addEventListener("pointerdown",e=>{
   const p=toXY(e);
   if(mode==="fill"){snap();fillAt(p[0],p[1],color);save();return;}
   snap();
+  carry=null;
   act={id:e.pointerId,last:p};
-  stroke(p,p,pressure(e));
+  if(mode==="blend")strokeBlend(p,p,pressure(e));
+  else stroke(p,p,pressure(e));
 },{passive:false});
 
 window.addEventListener("pointermove",e=>{
@@ -380,6 +406,9 @@ window.addEventListener("pointermove",e=>{
   if(pointers.size>=2){if(e.cancelable)e.preventDefault();moveGesture();return;}
   if(!act||e.pointerId!==act.id)return;
   if(e.cancelable)e.preventDefault();
+  if(mode==="blend"){                 // 混色要讀畫布，一次一點就好，不然會拖慢
+    const p=toXY(e);strokeBlend(act.last,p,pressure(e));act.last=p;return;
+  }
   const evs=e.getCoalescedEvents?e.getCoalescedEvents():[e];
   for(const ev of evs){const p=toXY(ev);stroke(act.last,p,pressure(ev));act.last=p;}
 },{passive:false});
@@ -387,7 +416,7 @@ window.addEventListener("pointermove",e=>{
 function endPointer(e){
   pointers.delete(e.pointerId);
   if(pointers.size<2)gesture=null;
-  if(act&&e.pointerId===act.id){act=null;save();}
+  if(act&&e.pointerId===act.id){act=null;carry=null;save();}
 }
 window.addEventListener("pointerup",endPointer);
 window.addEventListener("pointercancel",endPointer);
@@ -397,10 +426,12 @@ function setMode(m){
   mode=m;
   $("#mFill").setAttribute("aria-pressed",m==="fill");
   $("#mBrush").setAttribute("aria-pressed",m==="brush");
+  $("#mBlend").setAttribute("aria-pressed",m==="blend");
   $("#mErase").setAttribute("aria-pressed",m==="erase");
 }
 $("#mFill").onclick=()=>setMode("fill");
 $("#mBrush").onclick=()=>setMode("brush");
+$("#mBlend").onclick=()=>setMode("blend");
 $("#mErase").onclick=()=>setMode("erase");
 $("#size").oninput=e=>{brush=+e.target.value;};
 $("#penonly").onclick=()=>{
