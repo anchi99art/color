@@ -228,7 +228,7 @@ function loadArt(n){
     lctx.clearRect(0,0,iw,ih);
     lctx.putImageData(d,0,0);
     pctx.fillStyle="#FFFFFF";pctx.fillRect(0,0,iw,ih);
-    snapshots=[];pdata=null;
+    snapshots.length=0;pdata=null;
     restore();
     fit();resetView();
     updateUndo();
@@ -244,11 +244,14 @@ function fit(){
 }
 
 /* ---------- 記錄與復原 ---------- */
+// 每一步復原都要整張畫面複製一份，佔記憶體。
+// iPad 的分頁記憶體有限，存太多步會被系統直接關掉，所以只留三步。
+const UNDO_MAX=3;
 function snap(){
   try{
+    while(snapshots.length>=UNDO_MAX)snapshots.shift();
     snapshots.push(pctx.getImageData(0,0,iw,ih));
-    if(snapshots.length>8)snapshots.shift();
-  }catch(e){}
+  }catch(e){snapshots.length=0;}
   updateUndo();
 }
 function updateUndo(){$("#undo").disabled=snapshots.length===0;}
@@ -457,14 +460,27 @@ $("#penonly").onclick=()=>{
 
 /* ---------- 存檔 ---------- */
 const KEY="colorbook.v1";
-let saveTimer=null;
-function save(){
-  clearTimeout(saveTimer);
-  saveTimer=setTimeout(()=>{
-    try{localStorage.setItem(KEY+".art"+art,pc.toDataURL("image/png"));}
-    catch(e){toast("塗得太多，這台裝置存不下了。先存成圖片再清空。",6000);}
-  },900);
+let saveTimer=null,lastSave=0,autoSave=true;
+// 存檔要把整張圖轉成字串，很吃資源。改成停手四秒才存，
+// 而且兩次之間至少隔十五秒，連續填色的時候不會一直卡。
+function writeNow(){
+  if(!autoSave)return;
+  try{
+    localStorage.setItem(KEY+".art"+art,pc.toDataURL("image/png"));
+    lastSave=Date.now();
+  }catch(e){
+    autoSave=false;
+    toast("畫得太多，這台裝置存不下了。自動保存先停用，記得按「存圖」把成果存起來。",7000);
+  }
 }
+function save(){
+  if(!autoSave)return;
+  clearTimeout(saveTimer);
+  const wait=Math.max(4000,15000-(Date.now()-lastSave));
+  saveTimer=setTimeout(writeNow,wait);
+}
+window.addEventListener("pagehide",writeNow);
+document.addEventListener("visibilitychange",()=>{if(document.hidden)writeNow();});
 function restore(){
   try{
     const d=localStorage.getItem(KEY+".art"+art);
