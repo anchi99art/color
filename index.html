@@ -134,7 +134,7 @@ input[type=range]{flex:1;accent-color:var(--celadon);min-height:30px}
     <ol>
       <li>選一個顏色，點畫面上的空白處就填滿</li>
       <li>換成「筆刷」可以自己塗，Apple Pencil 有壓力感應</li>
-      <li>兩指撐開可以放大，細的地方就填得到</li>
+      <li>兩指撐開放大、轉動可以旋轉畫面，手怎麼順就怎麼擺</li>
       <li>不滿意按左上角的 ↺ 退回上一步</li>
     </ol>
     <div class="acts"><button id="welcomeGo">開始</button></div>
@@ -230,7 +230,7 @@ function loadArt(n){
     pctx.fillStyle="#FFFFFF";pctx.fillRect(0,0,iw,ih);
     snapshots=[];pdata=null;
     restore();
-    fit();resetZoom();
+    fit();resetView();
     updateUndo();
   };
   img.onerror=()=>toast("線稿載不進來，檢查檔案有沒有上傳完整");
@@ -293,38 +293,51 @@ function fillAt(x,y,hex){
   pctx.putImageData(pdata,0,0);
 }
 
-/* ---------- 縮放與平移：兩指縮放、兩指拖移，單指或筆照常畫 ---------- */
-let zs=1,zx=0,zy=0;
+/* ---------- 縮放、平移、旋轉：兩指縮放、拖移、轉動；單指或筆照常畫 ---------- */
+let zs=1,zx=0,zy=0,rot=0;
 const pointers=new Map();
 let gesture=null;
-function applyZoom(){
-  sheet.style.transform="translate("+zx+"px,"+zy+"px) scale("+zs+")";
-  $("#zoomLab").textContent=Math.round(zs*100)+"%";
+function applyView(){
+  sheet.style.transform="translate("+zx+"px,"+zy+"px) rotate("+rot+"rad) scale("+zs+")";
+  const deg=Math.round(rot*180/Math.PI)%360;
+  $("#zoomLab").textContent=Math.round(zs*100)+"%"+(deg?" · "+deg+"°":"");
 }
-function resetZoom(){zs=1;zx=0;zy=0;applyZoom();}
+function resetView(){zs=1;zx=0;zy=0;rot=0;applyView();}
+// 把螢幕上的點換算回線稿上的位置，旋轉和縮放都要倒推回去
+function localOf(cx,cy){
+  const r=stage.getBoundingClientRect();
+  const x=(cx-r.left)-sheet.offsetLeft-zx;
+  const y=(cy-r.top)-sheet.offsetTop-zy;
+  const c=Math.cos(-rot),si=Math.sin(-rot);
+  return [(x*c-y*si)/zs,(x*si+y*c)/zs];
+}
+function anchorTo(mx,my,local,s2,r2){
+  const r=stage.getBoundingClientRect();
+  const c=Math.cos(r2),si=Math.sin(r2);
+  const px=s2*local[0],py=s2*local[1];
+  zx=(mx-r.left)-sheet.offsetLeft-(px*c-py*si);
+  zy=(my-r.top)-sheet.offsetTop-(px*si+py*c);
+  zs=s2;rot=r2;
+}
 function zoomBy(f){
-  const s2=Math.max(1,Math.min(8,zs*f));
-  // 以畫面中央為中心縮放
-  const cx=sheet.offsetWidth/2,cy=sheet.offsetHeight/2;
-  zx=zx+(zs-s2)*cx;zy=zy+(zs-s2)*cy;
-  zs=s2;
-  if(zs===1){zx=0;zy=0;}
-  applyZoom();
+  const local=[sheet.clientWidth/2,sheet.clientHeight/2];
+  const r=stage.getBoundingClientRect();
+  const c=Math.cos(rot),si=Math.sin(rot);
+  const px=zs*local[0],py=zs*local[1];
+  const mx=r.left+sheet.offsetLeft+zx+(px*c-py*si);
+  const my=r.top+sheet.offsetTop+zy+(px*si+py*c);
+  anchorTo(mx,my,local,Math.max(1,Math.min(8,zs*f)),rot);
+  applyView();
 }
 $("#zoomIn").onclick=()=>zoomBy(1.4);
 $("#zoomOut").onclick=()=>zoomBy(1/1.4);
-$("#zoomReset").onclick=resetZoom;
+$("#zoomReset").onclick=resetView;
 
-function localOf(cx,cy){
-  const r=stage.getBoundingClientRect();
-  const bx=sheet.offsetLeft,by=sheet.offsetTop;
-  return [((cx-r.left)-bx-zx)/zs,((cy-r.top)-by-zy)/zs];
-}
 function startGesture(){
   const pts=[...pointers.values()];
   const dx=pts[0].x-pts[1].x,dy=pts[0].y-pts[1].y;
   const mx=(pts[0].x+pts[1].x)/2,my=(pts[0].y+pts[1].y)/2;
-  gesture={d0:Math.hypot(dx,dy)||1,s0:zs,local:localOf(mx,my)};
+  gesture={d0:Math.hypot(dx,dy)||1,a0:Math.atan2(dy,dx),s0:zs,r0:rot,local:localOf(mx,my)};
 }
 function moveGesture(){
   if(!gesture)return;
@@ -332,20 +345,22 @@ function moveGesture(){
   if(pts.length<2)return;
   const dx=pts[0].x-pts[1].x,dy=pts[0].y-pts[1].y;
   const mx=(pts[0].x+pts[1].x)/2,my=(pts[0].y+pts[1].y)/2;
-  const d=Math.hypot(dx,dy)||1;
-  zs=Math.max(1,Math.min(8,gesture.s0*(d/gesture.d0)));
-  const r=stage.getBoundingClientRect();
-  zx=(mx-r.left)-sheet.offsetLeft-zs*gesture.local[0];
-  zy=(my-r.top)-sheet.offsetTop-zs*gesture.local[1];
-  if(zs<=1.001){zs=1;zx=0;zy=0;}
-  applyZoom();
+  const d=Math.hypot(dx,dy)||1,a=Math.atan2(dy,dx);
+  const s2=Math.max(1,Math.min(8,gesture.s0*(d/gesture.d0)));
+  let r2=gesture.r0+(a-gesture.a0);
+  // 轉到快正的時候自動歸正，比較好擺回原位
+  const deg=((r2*180/Math.PI)%360+360)%360;
+  if(Math.min(deg,360-deg)<4)r2=Math.round(r2/(Math.PI*2))*Math.PI*2;
+  anchorTo(mx,my,gesture.local,s2,r2);
+  applyView();
 }
 
 /* ---------- 筆刷 ---------- */
 let act=null;
 function toXY(e){
-  const r=hc.getBoundingClientRect();
-  return [Math.round((e.clientX-r.left)/r.width*iw),Math.round((e.clientY-r.top)/r.height*ih)];
+  const l=localOf(e.clientX,e.clientY);
+  const kx=iw/(sheet.clientWidth||iw),ky=ih/(sheet.clientHeight||ih);
+  return [Math.round(l[0]*kx),Math.round(l[1]*ky)];
 }
 function accepted(e){return penOnly?e.pointerType==="pen":true;}
 function stroke(a,b,press){
@@ -505,7 +520,7 @@ $("#welcomeGo").onclick=()=>{
   try{localStorage.setItem(KEY+".seen","1");}catch(e){}
 };
 let rz=null;
-window.addEventListener("resize",()=>{clearTimeout(rz);rz=setTimeout(()=>{fit();resetZoom();},150);});
+window.addEventListener("resize",()=>{clearTimeout(rz);rz=setTimeout(()=>{fit();resetView();},150);});
 document.addEventListener("gesturestart",e=>e.preventDefault());
 document.addEventListener("touchmove",e=>{if(e.touches.length>1)e.preventDefault();},{passive:false});
 
