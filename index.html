@@ -15,7 +15,6 @@
 <title>填色 · 試用版｜ANCHI99</title>
 <style>
 :root{
-  --paper:#FBF8F1;--ink:#1B1815;
   --celadon:#3F5E57;--gold:#B9924F;
   --chrome:#1C1F1E;--chrome-2:#2A2F2D;--chrome-3:#3B423F;
   --chrome-text:#E9EEEB;--chrome-dim:#95A39D;
@@ -44,27 +43,20 @@ button.icon{min-width:42px;padding:0 9px;font-size:16px}
 button:disabled{opacity:.35}
 .pick{display:flex;gap:3px;background:var(--chrome-2);border-radius:10px;padding:3px}
 .pick button{background:transparent;min-width:38px;min-height:34px;padding:0;font-size:14px}
-.stage{flex:1 1 auto;min-height:0;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center;background:radial-gradient(120% 90% at 50% 0%,#262C2A 0%,#101413 100%);padding:10px;touch-action:none}
-.sheet{position:relative;transform-origin:0 0;box-shadow:0 10px 40px rgba(0,0,0,.5);background:#fff;border-radius:2px;overflow:hidden}
-.sheet canvas{position:absolute;inset:0;display:block;width:100%;height:100%}
-#paint{z-index:1}
-#line{z-index:2;pointer-events:none}
-#hit{position:absolute;inset:0;z-index:3;touch-action:none;background:transparent}
+.stage{flex:1 1 auto;min-height:0;position:relative;overflow:hidden;background:radial-gradient(120% 90% at 50% 0%,#262C2A 0%,#101413 100%);touch-action:none}
+#view{position:absolute;inset:0;display:block;width:100%;height:100%;touch-action:none}
 .hint{position:absolute;left:50%;bottom:12px;transform:translateX(-50%);background:rgba(20,23,22,.92);color:var(--chrome-dim);font-size:13px;padding:8px 14px;border-radius:999px;z-index:5;pointer-events:none;transition:opacity .4s;max-width:90%;text-align:center;opacity:0}
 .tools{flex:0 0 auto;background:var(--chrome);border-top:1px solid #000;padding:8px 10px;padding-bottom:calc(8px + env(safe-area-inset-bottom,0px))}
 .toolrow{display:flex;align-items:center;gap:8px;margin-bottom:8px}
-.toolrow .spacer{flex:1}
 .toolrow:last-child{margin-bottom:0}
+.toolrow .spacer{flex:1}
 .groups{display:flex;gap:6px}
 .groups button{min-width:46px;min-height:38px;padding:0 8px}
 .swatches{display:flex;gap:6px;overflow-x:auto;-webkit-overflow-scrolling:touch;padding:2px 0}
-.grp{display:flex;align-items:center;gap:5px;flex:0 0 auto;padding-right:10px;margin-right:4px;border-right:1px solid var(--chrome-3)}
-.grp:last-child{border-right:0}
-.grp .lab{font-size:11px;color:var(--chrome-dim);letter-spacing:.1em;width:14px;text-align:center}
-.sw{width:38px;height:38px;border-radius:8px;border:2px solid transparent;flex:0 0 auto;padding:0;min-height:0}
+.sw{width:38px;height:38px;border-radius:9px;border:2px solid transparent;flex:0 0 auto;padding:0;min-height:0}
 .sw[aria-pressed="true"]{border-color:#fff;transform:scale(1.08)}
-input[type=range]{flex:1;accent-color:var(--celadon);min-height:30px}
-.lab2{font-size:13px;color:var(--chrome-dim);white-space:nowrap}
+input[type=range]{flex:1;accent-color:var(--celadon);min-height:30px;max-width:180px}
+.lab2{font-size:13px;color:var(--chrome-dim);white-space:nowrap;font-variant-numeric:tabular-nums}
 .modal{position:fixed;inset:0;z-index:40;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.65);padding:20px}
 .modal.on{display:flex}
 .modal-card{background:var(--chrome-2);border-radius:16px;padding:22px;max-width:420px;width:100%;max-height:88vh;overflow:auto}
@@ -75,7 +67,6 @@ input[type=range]{flex:1;accent-color:var(--celadon);min-height:30px}
 #imgOut{width:100%;height:auto;border-radius:8px;margin-bottom:14px;background:#fff;-webkit-touch-callout:default;-webkit-user-select:auto;user-select:auto}
 #shareBtn{display:block;width:100%;background:var(--celadon);color:#fff;font-weight:600;margin-bottom:10px;min-height:48px}
 #openLink,#saveLink{display:block;text-align:center;text-decoration:none;background:var(--chrome-3);color:var(--chrome-text);border-radius:10px;padding:13px;margin-bottom:10px}
-.foot{font-size:11.5px;color:var(--chrome-dim);text-align:center;margin:12px 0 0}
 @media (max-width:700px){.brand{display:none}}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
@@ -96,11 +87,7 @@ input[type=range]{flex:1;accent-color:var(--celadon);min-height:30px}
 </header>
 
 <main class="stage" id="stage">
-  <div class="sheet" id="sheet">
-    <canvas id="paint"></canvas>
-    <canvas id="line"></canvas>
-    <div id="hit"></div>
-  </div>
+  <canvas id="view"></canvas>
   <div class="hint" id="hint"></div>
 </main>
 
@@ -110,7 +97,7 @@ input[type=range]{flex:1;accent-color:var(--celadon);min-height:30px}
     <button id="mBrush">筆刷</button>
     <button id="mBlend">混色</button>
     <button id="mErase">橡皮</button>
-    <span class="lab2" id="szLab">粗細</span>
+    <span class="lab2">粗細</span>
     <input type="range" id="size" min="4" max="60" step="2" value="18">
     <button id="penonly" aria-pressed="false">手指可畫</button>
   </div>
@@ -133,9 +120,9 @@ input[type=range]{flex:1;accent-color:var(--celadon);min-height:30px}
     <p>三張手繪線稿，試試看順不順手。</p>
     <ol>
       <li>選一個顏色，點畫面上的空白處就填滿</li>
+      <li>兩指撐開放大、轉動可以旋轉畫面</li>
       <li>換成「筆刷」可以自己塗，Apple Pencil 有壓力感應</li>
-      <li>兩指撐開放大、轉動可以旋轉畫面，手怎麼順就怎麼擺</li>
-      <li>不滿意按左上角的 ↺ 退回上一步</li>
+      <li>不滿意按右上角的 ↺ 退回上一步</li>
     </ol>
     <div class="acts"><button id="welcomeGo">開始</button></div>
   </div>
@@ -156,12 +143,15 @@ input[type=range]{flex:1;accent-color:var(--celadon);min-height:30px}
 (function(){
 "use strict";
 const $=s=>document.querySelector(s);
-const stage=$("#stage"),sheet=$("#sheet");
-const pc=$("#paint"),lc=$("#line"),hc=$("#hit");   // hit 只收手勢，不畫東西
-const pctx=pc.getContext("2d",{willReadFrequently:true});
-const lctx=lc.getContext("2d");
+const stage=$("#stage"),vc=$("#view");
+const vctx=vc.getContext("2d");
 
-/* 五行配色，每一行八階。之後要接日主推薦，改這一份就好。 */
+/* 畫面上只有一張跟螢幕一樣大的畫布。
+   線稿和顏色都放在看不見的暫存畫布裡，每次要顯示才照目前的縮放和角度畫上去。
+   這樣放大不會讓系統去準備一張巨大的圖層，記憶體是固定的。 */
+const pc=document.createElement("canvas"),pctx=pc.getContext("2d",{willReadFrequently:true});
+const lc=document.createElement("canvas"),lctx=lc.getContext("2d");
+
 const PALETTE={
  "木":["#1F4A2B","#2F6B3A","#4A8C4F","#6FA85F","#93C07A","#B7D49C","#D7E8C4","#EEF5E2"],
  "火":["#6E1B14","#9E2E24","#C24631","#D9603F","#E8915E","#F0B183","#F7D2B2","#FBE8D8"],
@@ -171,7 +161,8 @@ const PALETTE={
  "墨":["#000000","#2B2B2B","#555555","#808080","#AAAAAA","#D5D5D5","#F2F2F2","#FFFFFF"]
 };
 let color="#4A8C4F",group="木",mode="fill",brush=18,penOnly=false;
-let art=1,iw=0,ih=0,wall=null,snapshots=[],pdata=null;
+let art=1,iw=0,ih=0,wall=null,visited=null,pdata=null,snapshots=[];
+let zoom=1,panX=0,panY=0,rot=0,baseK=1,dpr=1;
 
 /* ---------- 調色盤 ---------- */
 function drawSwatches(){
@@ -181,14 +172,11 @@ function drawSwatches(){
     b.className="sw";b.style.background=c;b.dataset.c=c;
     b.setAttribute("aria-label",group+" "+c);
     b.setAttribute("aria-pressed",c===color?"true":"false");
-    b.onclick=()=>{
-      color=c;drawSwatches();
-      if(mode==="erase")setMode("fill");
-    };
+    b.onclick=()=>{color=c;drawSwatches();if(mode==="erase")setMode("fill");};
     box.appendChild(b);
   }
 }
-(function buildGroups(){
+(function(){
   const box=$("#grp");
   for(const name in PALETTE){
     const b=document.createElement("button");
@@ -204,6 +192,59 @@ function drawSwatches(){
   drawSwatches();
 })();
 
+/* ---------- 顯示 ---------- */
+let pending=false;
+function draw(){
+  pending=false;
+  const w=stage.clientWidth,h=stage.clientHeight;
+  vctx.setTransform(1,0,0,1,0,0);
+  vctx.clearRect(0,0,vc.width,vc.height);
+  if(!iw)return;
+  const k=baseK*zoom;
+  vctx.save();
+  vctx.scale(dpr,dpr);
+  vctx.translate(w/2+panX,h/2+panY);
+  vctx.rotate(rot);
+  vctx.scale(k,k);
+  vctx.translate(-iw/2,-ih/2);
+  vctx.shadowColor="rgba(0,0,0,.45)";vctx.shadowBlur=24/k;vctx.shadowOffsetY=8/k;
+  vctx.fillStyle="#FFFFFF";vctx.fillRect(0,0,iw,ih);
+  vctx.shadowColor="transparent";
+  vctx.drawImage(pc,0,0);
+  vctx.drawImage(lc,0,0);
+  vctx.restore();
+  $("#zoomLab").textContent=Math.round(zoom*100)+"%"+((Math.round(rot*180/Math.PI)%360)?" · "+(Math.round(rot*180/Math.PI)%360)+"°":"");
+}
+function render(){if(!pending){pending=true;requestAnimationFrame(draw);}}
+function fit(){
+  dpr=Math.min(window.devicePixelRatio||1,2);
+  const w=stage.clientWidth,h=stage.clientHeight;
+  vc.width=Math.round(w*dpr);vc.height=Math.round(h*dpr);
+  if(iw)baseK=Math.min((w-24)/iw,(h-24)/ih);
+  render();
+}
+function resetView(){zoom=1;panX=0;panY=0;rot=0;render();}
+
+/* 螢幕座標 → 線稿座標 */
+function toArt(cx,cy){
+  const r=stage.getBoundingClientRect();
+  const k=baseK*zoom;
+  let x=(cx-r.left)-(stage.clientWidth/2+panX);
+  let y=(cy-r.top)-(stage.clientHeight/2+panY);
+  const c=Math.cos(-rot),s=Math.sin(-rot);
+  const rx=(x*c-y*s)/k,ry=(x*s+y*c)/k;
+  return [Math.round(rx+iw/2),Math.round(ry+ih/2)];
+}
+/* 讓某個線稿座標停在螢幕上的某一點 */
+function anchor(a,cx,cy,k2,r2){
+  const r=stage.getBoundingClientRect();
+  const px=k2*(a[0]-iw/2),py=k2*(a[1]-ih/2);
+  const c=Math.cos(r2),s=Math.sin(r2);
+  panX=(cx-r.left)-stage.clientWidth/2-(px*c-py*s);
+  panY=(cy-r.top)-stage.clientHeight/2-(px*s+py*c);
+  zoom=k2/baseK;rot=r2;
+}
+
 /* ---------- 載入線稿 ---------- */
 function loadArt(n){
   art=n;
@@ -211,41 +252,27 @@ function loadArt(n){
   const img=new Image();
   img.onload=()=>{
     iw=img.naturalWidth;ih=img.naturalHeight;
-    for(const c of [pc,lc]){c.width=iw;c.height=ih;}
-    // 讀出線稿，做出「牆」的遮罩，並把白底變透明留下線條
+    pc.width=iw;pc.height=ih;lc.width=iw;lc.height=ih;
     const t=document.createElement("canvas");t.width=iw;t.height=ih;
     const tc=t.getContext("2d",{willReadFrequently:true});
     tc.drawImage(img,0,0);
-    const d=tc.getImageData(0,0,iw,ih);
-    const a=d.data;
+    const d=tc.getImageData(0,0,iw,ih),a=d.data;
     wall=new Uint8Array(iw*ih);
     for(let i=0,p=0;i<a.length;i+=4,p++){
       const lum=(a[i]*299+a[i+1]*587+a[i+2]*114)/1000;
       if(lum<140)wall[p]=1;
-      a[i]=a[i+1]=a[i+2]=20;
-      a[i+3]=255-lum;           // 越黑越不透明
+      a[i]=a[i+1]=a[i+2]=20;a[i+3]=255-lum;
     }
-    lctx.clearRect(0,0,iw,ih);
-    lctx.putImageData(d,0,0);
+    lctx.clearRect(0,0,iw,ih);lctx.putImageData(d,0,0);
     pctx.fillStyle="#FFFFFF";pctx.fillRect(0,0,iw,ih);
-    snapshots.length=0;pdata=null;
-    restore();
-    fit();resetView();
-    updateUndo();
+    snapshots.length=0;pdata=null;visited=null;
+    restore();fit();resetView();updateUndo();
   };
   img.onerror=()=>toast("線稿載不進來，檢查檔案有沒有上傳完整");
   img.src="art"+n+".png";
 }
-function fit(){
-  const aw=stage.clientWidth-20,ah=stage.clientHeight-20;
-  const s=Math.min(aw/iw,ah/ih);
-  sheet.style.width=Math.floor(iw*s)+"px";
-  sheet.style.height=Math.floor(ih*s)+"px";
-}
 
-/* ---------- 記錄與復原 ---------- */
-// 以前每按一次都把整張畫面複製一份（約 3.7 MB），填十次就吃掉三十幾 MB，
-// iPad 的分頁撐不住就被系統關掉。現在填色只記錄真正被塗到的那一小塊。
+/* ---------- 復原：只記錄真正變動的那一塊 ---------- */
 const UNDO_MAX=6;
 function pushUndo(x,y,w,h){
   try{
@@ -254,22 +281,19 @@ function pushUndo(x,y,w,h){
   }catch(e){snapshots.length=0;}
   updateUndo();
 }
-function snap(){pushUndo(0,0,iw,ih);}   // 筆刷與清空仍然整張記錄
+function snap(){pushUndo(0,0,iw,ih);}
 function updateUndo(){$("#undo").disabled=snapshots.length===0;}
 $("#undo").onclick=()=>{
   const u=snapshots.pop();
-  if(u){pctx.putImageData(u.img,u.x,u.y);pdata=null;save();}
+  if(u){pctx.putImageData(u.img,u.x,u.y);pdata=null;render();save();}
   updateUndo();
 };
 $("#clear").onclick=()=>{
-  snap();
-  pctx.fillStyle="#FFFFFF";pctx.fillRect(0,0,iw,ih);
-  pdata=null;save();
+  snap();pctx.fillStyle="#FFFFFF";pctx.fillRect(0,0,iw,ih);pdata=null;render();save();
 };
 
 /* ---------- 填色 ---------- */
 function hexRGB(h){return [parseInt(h.slice(1,3),16),parseInt(h.slice(3,5),16),parseInt(h.slice(5,7),16)];}
-let visited=null;
 function fillAt(x,y,hex){
   if(x<0||y<0||x>=iw||y>=ih)return;
   if(wall[y*iw+x])return;
@@ -281,8 +305,6 @@ function fillAt(x,y,hex){
   if(start===fillv)return;
   if(!visited||visited.length!==iw*ih)visited=new Uint8Array(iw*ih);
   else visited.fill(0);
-
-  // 第一段：只標記要填哪些點，順便算出範圍，先不動畫面
   let minX=iw,maxX=-1,minY=ih,maxY=-1;
   const stack=[x,y];
   while(stack.length){
@@ -304,105 +326,29 @@ function fillAt(x,y,hex){
   }
   if(maxX<0)return;
   const bw=maxX-minX+1,bh=maxY-minY+1;
-
-  // 第二段：把這一塊的原狀存起來當復原，再真的填上去
   pushUndo(minX,minY,bw,bh);
   for(let yy=minY;yy<=maxY;yy++){
     const row=yy*iw;
     for(let xx=minX;xx<=maxX;xx++){const i=row+xx;if(visited[i])u32[i]=fillv;}
   }
   pctx.putImageData(pdata,0,0,minX,minY,bw,bh);
+  render();
 }
 
-/* ---------- 縮放、平移、旋轉：兩指縮放、拖移、轉動；單指或筆照常畫 ---------- */
-let zs=1,zx=0,zy=0,rot=0;
-const pointers=new Map();
-let gesture=null;
-function applyView(){
-  sheet.style.transform="translate("+zx+"px,"+zy+"px) rotate("+rot+"rad) scale("+zs+")";
-  const deg=Math.round(rot*180/Math.PI)%360;
-  $("#zoomLab").textContent=Math.round(zs*100)+"%"+(deg?" · "+deg+"°":"");
-}
-function resetView(){zs=1;zx=0;zy=0;rot=0;applyView();}
-// 把螢幕上的點換算回線稿上的位置，旋轉和縮放都要倒推回去
-function localOf(cx,cy){
-  const r=stage.getBoundingClientRect();
-  const x=(cx-r.left)-sheet.offsetLeft-zx;
-  const y=(cy-r.top)-sheet.offsetTop-zy;
-  const c=Math.cos(-rot),si=Math.sin(-rot);
-  return [(x*c-y*si)/zs,(x*si+y*c)/zs];
-}
-function anchorTo(mx,my,local,s2,r2){
-  const r=stage.getBoundingClientRect();
-  const c=Math.cos(r2),si=Math.sin(r2);
-  const px=s2*local[0],py=s2*local[1];
-  zx=(mx-r.left)-sheet.offsetLeft-(px*c-py*si);
-  zy=(my-r.top)-sheet.offsetTop-(px*si+py*c);
-  zs=s2;rot=r2;
-}
-function zoomBy(f){
-  const local=[sheet.clientWidth/2,sheet.clientHeight/2];
-  const r=stage.getBoundingClientRect();
-  const c=Math.cos(rot),si=Math.sin(rot);
-  const px=zs*local[0],py=zs*local[1];
-  const mx=r.left+sheet.offsetLeft+zx+(px*c-py*si);
-  const my=r.top+sheet.offsetTop+zy+(px*si+py*c);
-  anchorTo(mx,my,local,Math.max(1,Math.min(4,zs*f)),rot);
-  applyView();
-}
-$("#zoomIn").onclick=()=>zoomBy(1.4);
-$("#zoomOut").onclick=()=>zoomBy(1/1.4);
-$("#zoomReset").onclick=resetView;
-
-function startGesture(){
-  const pts=[...pointers.values()];
-  const dx=pts[0].x-pts[1].x,dy=pts[0].y-pts[1].y;
-  const mx=(pts[0].x+pts[1].x)/2,my=(pts[0].y+pts[1].y)/2;
-  sheet.style.willChange="transform";
-  gesture={d0:Math.hypot(dx,dy)||1,a0:Math.atan2(dy,dx),s0:zs,r0:rot,local:localOf(mx,my)};
-}
-function moveGesture(){
-  if(!gesture)return;
-  const pts=[...pointers.values()];
-  if(pts.length<2)return;
-  const dx=pts[0].x-pts[1].x,dy=pts[0].y-pts[1].y;
-  const mx=(pts[0].x+pts[1].x)/2,my=(pts[0].y+pts[1].y)/2;
-  const d=Math.hypot(dx,dy)||1,a=Math.atan2(dy,dx);
-  const s2=Math.max(1,Math.min(4,gesture.s0*(d/gesture.d0)));
-  let r2=gesture.r0+(a-gesture.a0);
-  // 轉到快正的時候自動歸正，比較好擺回原位
-  const deg=((r2*180/Math.PI)%360+360)%360;
-  if(Math.min(deg,360-deg)<4)r2=Math.round(r2/(Math.PI*2))*Math.PI*2;
-  anchorTo(mx,my,gesture.local,s2,r2);
-  applyView();
-}
-
-/* ---------- 筆刷 ---------- */
-let act=null;
-function toXY(e){
-  const l=localOf(e.clientX,e.clientY);
-  const kx=iw/(sheet.clientWidth||iw),ky=ih/(sheet.clientHeight||ih);
-  return [Math.round(l[0]*kx),Math.round(l[1]*ky)];
-}
-function accepted(e){return penOnly?e.pointerType==="pen":true;}
-function stroke(a,b,press){
-  pctx.save();
-  pctx.globalCompositeOperation="source-over";
-  pctx.strokeStyle=mode==="erase"?"#FFFFFF":color;
-  pctx.lineCap="round";pctx.lineJoin="round";
-  const shown=(sheet.clientWidth||iw)*zs;
-  pctx.lineWidth=brush*(iw/shown)*(0.4+1.0*press);
-  pctx.beginPath();pctx.moveTo(a[0],a[1]);pctx.lineTo(b[0],b[1]);pctx.stroke();
-  pctx.restore();
-  pdata=null;
-}
-// 混色筆：一邊畫一邊讀下面已經有的顏色，跟筆上的顏色揉在一起，
-// 疊得越久顏色推得越開，像油畫刀把兩色抹在一起。
+/* ---------- 筆刷與混色 ---------- */
 let carry=null;
 function mix(a,b,t){return [a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t,a[2]+(b[2]-a[2])*t];}
 function sampleAt(x,y){
   const px=Math.max(0,Math.min(iw-1,Math.round(x))),py=Math.max(0,Math.min(ih-1,Math.round(y)));
   try{const d=pctx.getImageData(px,py,1,1).data;return [d[0],d[1],d[2]];}catch(e){return [255,255,255];}
+}
+function lineW(press){return Math.max(0.5,brush/(baseK*zoom)*(0.4+1.0*press));}
+function stroke(a,b,press){
+  pctx.save();
+  pctx.strokeStyle=mode==="erase"?"#FFFFFF":color;
+  pctx.lineCap="round";pctx.lineJoin="round";pctx.lineWidth=lineW(press);
+  pctx.beginPath();pctx.moveTo(a[0],a[1]);pctx.lineTo(b[0],b[1]);pctx.stroke();
+  pctx.restore();pdata=null;
 }
 function strokeBlend(a,b,press){
   const s0=sampleAt(b[0],b[1]);
@@ -412,47 +358,78 @@ function strokeBlend(a,b,press){
   pctx.save();
   pctx.globalAlpha=0.10+0.26*press;
   pctx.strokeStyle="rgb("+Math.round(c[0])+","+Math.round(c[1])+","+Math.round(c[2])+")";
-  pctx.lineCap="round";pctx.lineJoin="round";
-  const shown=(sheet.clientWidth||iw)*zs;
-  pctx.lineWidth=brush*(iw/shown)*(0.6+0.9*press);
+  pctx.lineCap="round";pctx.lineJoin="round";pctx.lineWidth=lineW(press)*1.4;
   pctx.beginPath();pctx.moveTo(a[0],a[1]);pctx.lineTo(b[0],b[1]);pctx.stroke();
-  pctx.restore();
-  pdata=null;
+  pctx.restore();pdata=null;
 }
 function pressure(e){let p=e.pressure;if(e.pointerType!=="pen"||!p)p=.6;return Math.max(.08,Math.min(1,p));}
+const accepted=e=>penOnly?e.pointerType==="pen":true;
 
-hc.addEventListener("touchstart",e=>e.preventDefault(),{passive:false});
-hc.addEventListener("pointerdown",e=>{
-  pointers.set(e.pointerId,{x:e.clientX,y:e.clientY,type:e.pointerType});
-  if(pointers.size>=2){          // 兩指以上 = 縮放平移，不要畫
-    act=null;startGesture();e.preventDefault();return;
-  }
+/* ---------- 手勢 ---------- */
+const pointers=new Map();
+let gesture=null,act=null;
+vc.addEventListener("touchstart",e=>e.preventDefault(),{passive:false});
+function startGesture(){
+  const p=[...pointers.values()];
+  const dx=p[0].x-p[1].x,dy=p[0].y-p[1].y;
+  const mx=(p[0].x+p[1].x)/2,my=(p[0].y+p[1].y)/2;
+  gesture={d0:Math.hypot(dx,dy)||1,a0:Math.atan2(dy,dx),k0:baseK*zoom,r0:rot,art:toArt(mx,my)};
+}
+function moveGesture(){
+  if(!gesture)return;
+  const p=[...pointers.values()];
+  if(p.length<2)return;
+  const dx=p[0].x-p[1].x,dy=p[0].y-p[1].y;
+  const mx=(p[0].x+p[1].x)/2,my=(p[0].y+p[1].y)/2;
+  const d=Math.hypot(dx,dy)||1,a=Math.atan2(dy,dx);
+  let k2=gesture.k0*(d/gesture.d0);
+  k2=Math.max(baseK,Math.min(baseK*6,k2));
+  let r2=gesture.r0+(a-gesture.a0);
+  const deg=((r2*180/Math.PI)%360+360)%360;
+  if(Math.min(deg,360-deg)<4)r2=Math.round(r2/(Math.PI*2))*Math.PI*2;
+  anchor(gesture.art,mx,my,k2,r2);
+  render();
+}
+function zoomBy(f){
+  const r=stage.getBoundingClientRect();
+  const cx=r.left+stage.clientWidth/2,cy=r.top+stage.clientHeight/2;
+  const a=toArt(cx,cy);
+  const k2=Math.max(baseK,Math.min(baseK*6,baseK*zoom*f));
+  anchor(a,cx,cy,k2,rot);render();
+}
+$("#zoomIn").onclick=()=>zoomBy(1.4);
+$("#zoomOut").onclick=()=>zoomBy(1/1.4);
+$("#zoomReset").onclick=resetView;
+
+vc.addEventListener("pointerdown",e=>{
+  pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
+  if(pointers.size>=2){act=null;startGesture();e.preventDefault();return;}
   if(!accepted(e))return;
   e.preventDefault();hideHint();
-  const p=toXY(e);
+  const p=toArt(e.clientX,e.clientY);
   if(mode==="fill"){fillAt(p[0],p[1],color);save();return;}
-  snap();
-  carry=null;
+  snap();carry=null;
   act={id:e.pointerId,last:p};
-  if(mode==="blend")strokeBlend(p,p,pressure(e));
-  else stroke(p,p,pressure(e));
+  if(mode==="blend")strokeBlend(p,p,pressure(e));else stroke(p,p,pressure(e));
+  render();
 },{passive:false});
 
 window.addEventListener("pointermove",e=>{
-  if(pointers.has(e.pointerId))pointers.set(e.pointerId,{x:e.clientX,y:e.clientY,type:e.pointerType});
+  if(pointers.has(e.pointerId))pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
   if(pointers.size>=2){if(e.cancelable)e.preventDefault();moveGesture();return;}
   if(!act||e.pointerId!==act.id)return;
   if(e.cancelable)e.preventDefault();
-  if(mode==="blend"){                 // 混色要讀畫布，一次一點就好，不然會拖慢
-    const p=toXY(e);strokeBlend(act.last,p,pressure(e));act.last=p;return;
+  if(mode==="blend"){
+    const p=toArt(e.clientX,e.clientY);strokeBlend(act.last,p,pressure(e));act.last=p;render();return;
   }
   const evs=e.getCoalescedEvents?e.getCoalescedEvents():[e];
-  for(const ev of evs){const p=toXY(ev);stroke(act.last,p,pressure(ev));act.last=p;}
+  for(const ev of evs){const p=toArt(ev.clientX,ev.clientY);stroke(act.last,p,pressure(ev));act.last=p;}
+  render();
 },{passive:false});
 
 function endPointer(e){
   pointers.delete(e.pointerId);
-  if(pointers.size<2){gesture=null;sheet.style.willChange="auto";}
+  if(pointers.size<2)gesture=null;
   if(act&&e.pointerId===act.id){act=null;carry=null;save();}
 }
 window.addEventListener("pointerup",endPointer);
@@ -477,26 +454,18 @@ $("#penonly").onclick=()=>{
   $("#penonly").textContent=penOnly?"只接受筆":"手指可畫";
 };
 
-/* ---------- 存檔 ---------- */
+/* ---------- 保存 ---------- */
 const KEY="colorbook.v1";
 let saveTimer=null,lastSave=0,autoSave=true;
-// 存檔要把整張圖轉成字串，很吃資源。改成停手四秒才存，
-// 而且兩次之間至少隔十五秒，連續填色的時候不會一直卡。
 function writeNow(){
-  if(!autoSave)return;
-  try{
-    localStorage.setItem(KEY+".art"+art,pc.toDataURL("image/png"));
-    lastSave=Date.now();
-  }catch(e){
-    autoSave=false;
-    toast("畫得太多，這台裝置存不下了。自動保存先停用，記得按「存圖」把成果存起來。",7000);
-  }
+  if(!autoSave||!iw)return;
+  try{localStorage.setItem(KEY+".art"+art,pc.toDataURL("image/png"));lastSave=Date.now();}
+  catch(e){autoSave=false;toast("畫得太多，這台裝置存不下了。自動保存先停用，記得按「存圖」。",7000);}
 }
 function save(){
   if(!autoSave)return;
   clearTimeout(saveTimer);
-  const wait=Math.max(4000,15000-(Date.now()-lastSave));
-  saveTimer=setTimeout(writeNow,wait);
+  saveTimer=setTimeout(writeNow,Math.max(4000,15000-(Date.now()-lastSave)));
 }
 window.addEventListener("pagehide",writeNow);
 document.addEventListener("visibilitychange",()=>{if(document.hidden)writeNow();});
@@ -505,7 +474,7 @@ function restore(){
     const d=localStorage.getItem(KEY+".art"+art);
     if(!d)return;
     const im=new Image();
-    im.onload=()=>{pctx.drawImage(im,0,0);pdata=null;};
+    im.onload=()=>{pctx.drawImage(im,0,0);pdata=null;render();};
     im.src=d;
   }catch(e){}
 }
@@ -548,7 +517,7 @@ let hintTimer=null;
 function hideHint(){$("#hint").style.opacity="0";}
 function toast(m,ms){const h=$("#hint");h.textContent=m;h.style.opacity="1";clearTimeout(hintTimer);hintTimer=setTimeout(hideHint,ms||3600);}
 document.querySelectorAll("[data-art]").forEach(b=>{
-  b.onclick=()=>{if(+b.dataset.art!==art)loadArt(+b.dataset.art);};
+  b.onclick=()=>{if(+b.dataset.art!==art){writeNow();loadArt(+b.dataset.art);}};
 });
 $("#welcomeGo").onclick=()=>{
   $("#welcome").classList.remove("on");
@@ -562,6 +531,7 @@ document.addEventListener("touchmove",e=>{if(e.touches.length>1)e.preventDefault
 let seen=false;
 try{seen=!!localStorage.getItem(KEY+".seen");}catch(e){}
 if(!seen)$("#welcome").classList.add("on");
+fit();
 loadArt(1);
 if(seen)setTimeout(()=>toast("選個顏色，點空白處就填滿",4500),400);
 
